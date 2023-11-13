@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.75"
 strum = { version = "0.25.0", features = ["derive"] }
+tabled = "0.14.0"

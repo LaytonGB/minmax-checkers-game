@@ -1,4 +1,7 @@
+use std::{fmt::Display, iter::repeat};
+
 use strum::IntoEnumIterator;
+use tabled::{builder::Builder, settings::Style, tables::IterTable, Table};
 
 use crate::{diagonal::Diagonal, piece::Piece, player::Player};
 
@@ -95,14 +98,53 @@ impl<const BOARD_SIZE_SQUARED_HALVED: usize> Board<BOARD_SIZE_SQUARED_HALVED> {
         vec![]
     }
 
-    pub fn find_path_and_captured_pieces(
-        &self,
-        start_pos: usize,
-        end_pos: usize,
-    ) -> (Vec<usize>, Vec<usize>) {
-    }
+    // pub fn find_path_and_captured_pieces(
+    //     &self,
+    //     start_pos: usize,
+    //     end_pos: usize,
+    // ) -> (Vec<usize>, Vec<usize>) {
+    // }
 
     pub fn move_piece(&mut self, start_pos: usize, end_pos: usize) {
         todo!("piece must be moved and also take max number of pieces during move")
+    }
+}
+
+impl<const BOARD_SIZE_SQUARED_HALVED: usize> Display for Board<BOARD_SIZE_SQUARED_HALVED> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let board_size = self.get_board_size();
+        let mut builder = Builder::default();
+        let mut data: Vec<&str> = self
+            .0
+            .iter()
+            .zip(repeat("⬜"))
+            .flat_map(|(p, sq)| {
+                [
+                    sq,
+                    match p {
+                        Some(p) => match (p.player, p.is_king) {
+                            (Player::Red, true) => "RK",
+                            (Player::Red, false) => "R",
+                            (Player::White, true) => "WK",
+                            (Player::White, false) => "W",
+                        },
+                        None => "⬛",
+                    },
+                ]
+            })
+            .collect();
+        let mut data: Vec<Vec<&str>> = data.chunks(board_size).map(move |r| Vec::from(r)).collect();
+        for i in (1..board_size).step_by(2) {
+            let s = data[i].remove(0);
+            data[i].push(s);
+        }
+        for row in data.into_iter() {
+            builder.push_record(row);
+        }
+        let table = builder
+            .build()
+            .with(Style::ascii().remove_horizontals())
+            .to_string();
+        write!(f, "{}", table)
     }
 }

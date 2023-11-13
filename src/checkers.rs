@@ -49,4 +49,8 @@ impl<const BOARD_SIZE_SQUARED_HALVED: usize> Checkers<BOARD_SIZE_SQUARED_HALVED>
             false
         }
     }
+
+    pub fn print(&self) {
+        println!("{}", self.board);
+    }
 }

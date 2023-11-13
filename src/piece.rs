@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::player::Player;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -12,5 +14,20 @@ impl Piece {
             is_king: false,
             player,
         }
+    }
+}
+
+impl Display for Piece {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match (self.player, self.is_king) {
+                (Player::Red, true) => "RK",
+                (Player::Red, false) => "R",
+                (Player::White, true) => "WK",
+                (Player::White, false) => "W",
+            }
+        )
     }
 }
