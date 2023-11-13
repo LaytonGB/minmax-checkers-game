@@ -1,7 +1,7 @@
 use std::{fmt::Display, iter::repeat};
 
 use strum::IntoEnumIterator;
-use tabled::{builder::Builder, settings::Style, tables::IterTable, Table};
+use tabled::{builder::Builder, settings::Style};
 
 use crate::{diagonal::Diagonal, piece::Piece, player::Player};
 
@@ -114,7 +114,7 @@ impl<const BOARD_SIZE_SQUARED_HALVED: usize> Display for Board<BOARD_SIZE_SQUARE
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let board_size = self.get_board_size();
         let mut builder = Builder::default();
-        let mut data: Vec<&str> = self
+        let data: Vec<&str> = self
             .0
             .iter()
             .zip(repeat("⬜"))
@@ -141,10 +141,7 @@ impl<const BOARD_SIZE_SQUARED_HALVED: usize> Display for Board<BOARD_SIZE_SQUARE
         for row in data.into_iter() {
             builder.push_record(row);
         }
-        let table = builder
-            .build()
-            .with(Style::ascii().remove_horizontals())
-            .to_string();
+        let table = builder.build().with(Style::dots()).to_string();
         write!(f, "{}", table)
     }
 }
