@@ -22,7 +22,7 @@ impl BoardHandler {
     }
 
     pub fn get_valid_moves(board: &Board, position: usize) -> Vec<(Option<Piece>, usize)> {
-        let captures = Self::get_valid_captures(board, position, vec![false; board.0.len()]);
+        let captures = Self::get_valid_captures(board, position);
         if let Ok(captures) = captures {
             if captures.len() > 0 {
                 return captures;
@@ -65,7 +65,6 @@ impl BoardHandler {
     pub fn get_valid_captures(
         board: &Board,
         position: usize,
-        visited: Vec<bool>,
     ) -> Result<Vec<(Option<Piece>, usize)>> {
         if let Some(piece) = board.0[position] {
             let (y, x) = board.to_coord(position);
