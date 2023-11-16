@@ -1,10 +1,10 @@
 use kar_checkers_minmax::checkers::Checkers;
+use kar_checkers_minmax::game_manager::GameManager;
 use kar_checkers_minmax::player::Player;
 
 const BOARD_SIZE: usize = 8;
-const BOARD_SIZE_SQUARED_HALVED: usize = BOARD_SIZE.pow(2) / 2;
 
 fn main() {
-    let game = Checkers::<BOARD_SIZE_SQUARED_HALVED>::new(Player::Red);
-    game.print()
+    let mut game = Checkers::new(Player::Red, BOARD_SIZE);
+    GameManager::start(&mut game);
 }
