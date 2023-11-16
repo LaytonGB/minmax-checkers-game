@@ -10,9 +10,8 @@ impl GameManager {
         while BoardHandler::count_player_pieces(&game.board, Player::Red) > 0
             && BoardHandler::count_player_pieces(&game.board, Player::White) > 0
         {
-            if !BoardHandler::can_move_some_piece(&game.board, game.current_player) {
+            if !Self::can_move(game) {
                 game.end_turn();
-                break;
             }
 
             game.print();
@@ -32,12 +31,8 @@ impl GameManager {
                             BoardHandler::get_valid_moves(&game.board, *past_positions.last().unwrap()).iter().map(|(_,p)| game.board.to_coord(*p)).collect::<Vec<_>>()
                         ),
                     };
-                    match (text_io::try_read!("{}"), text_io::try_read!("{}")) {
-                        (Ok(y), Ok(x)) => {
-                            response = Some((y, x));
-                            break;
-                        }
-                        _ => (),
+                    if let (Ok(y), Ok(x)) = (text_io::try_read!("{}"), text_io::try_read!("{}")) {
+                        response = Some((y, x));
                     }
                 }
 
@@ -50,12 +45,30 @@ impl GameManager {
                     println!("\nERROR: {}\n", e);
                 }
             } else {
-                // do MinMax things
+                // TODO bot stuff
                 todo!("bot logic");
             }
         }
 
         Self::end(None);
+    }
+
+    fn can_move(game: &Checkers) -> bool {
+        match game.state {
+            State::Selecting => {
+                BoardHandler::movable_pieces_for_player(&game.board, game.current_player).len() > 0
+            }
+            State::Moving(position) => {
+                BoardHandler::get_valid_moves(&game.board, position).len() > 0
+            }
+            State::Chaining(ref past_positions) => {
+                let position = *past_positions.last().unwrap();
+                BoardHandler::get_valid_captures(&game.board, position)
+                    .unwrap_or(Vec::new())
+                    .len()
+                    > 0
+            }
+        }
     }
 
     pub fn end(winner: Option<Player>) {

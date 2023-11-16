@@ -76,9 +76,11 @@ impl BoardHandler {
                     let pos1 = board.to_position((row1, col1));
                     if let Some(piece_to_be_captured) = board.0[pos1] {
                         let (row2, col2) = (row1.wrapping_add(*i), col1.wrapping_add(*j));
-                        let pos2 = board.to_position((row2, col2));
-                        if let None = board.0[pos2] {
-                            v.push((Some(piece_to_be_captured), pos2));
+                        if row2 < half_board_size && col2 < half_board_size {
+                            let pos2 = board.to_position((row2, col2));
+                            if let None = board.0[pos2] {
+                                v.push((Some(piece_to_be_captured), pos2));
+                            }
                         }
                     }
                 }
@@ -97,13 +99,23 @@ impl BoardHandler {
         }
     }
 
-    pub fn can_move_some_piece(board: &Board, player: Player) -> bool {
-        board.0.iter().enumerate().any(|(i, p)| {
-            p.and_then(|p| {
-                Some(p.player == player && BoardHandler::get_valid_moves(board, i).len() > 0)
+    pub fn movable_pieces_for_player(board: &Board, player: Player) -> Vec<usize> {
+        board
+            .0
+            .iter()
+            .enumerate()
+            .filter_map(|(i, p)| {
+                if p.and_then(|p| {
+                    Some(p.player == player && BoardHandler::get_valid_moves(board, i).len() > 0)
+                })
+                .unwrap_or(false)
+                {
+                    Some(i)
+                } else {
+                    None
+                }
             })
-            .unwrap_or(false)
-        })
+            .collect()
     }
 
     pub fn move_piece_to(

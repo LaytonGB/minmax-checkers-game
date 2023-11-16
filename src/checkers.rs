@@ -46,18 +46,29 @@ impl Checkers {
     }
 
     pub fn move_piece(&mut self, new_position: usize) -> Result<usize> {
-        let old_position = match self.state {
+        let (old_position, valid_moves) = match self.state {
             State::Selecting => panic!("moving piece without piece to move"),
-            State::Moving(old_position) => old_position,
-            State::Chaining(ref past_positions) => *past_positions.last().unwrap(),
+
+            State::Moving(old_position) => (
+                old_position,
+                BoardHandler::get_valid_moves(&self.board, old_position),
+            ),
+            State::Chaining(ref past_positions) => {
+                let old_position = *past_positions.last().unwrap();
+                (
+                    old_position,
+                    BoardHandler::get_valid_captures(&self.board, old_position)
+                        .unwrap_or(Vec::new()),
+                )
+            }
         };
-        let valid_moves = BoardHandler::get_valid_moves(&self.board, old_position);
         if valid_moves.len() == 0 {
             if let State::Chaining(_) = self.state {
+                println!("HERE HERE HERE");
                 self.end_turn();
                 Err(anyhow!("no valid chaining moves, turn has ended"))
             } else {
-                panic!("cannot run out of moves in a non-chaining state in this function");
+                unreachable!("cannot run out of moves here");
             }
         } else if valid_moves.iter().any(|(_, p)| *p == new_position) {
             match BoardHandler::move_piece_to(&mut self.board, old_position, new_position) {
@@ -86,7 +97,7 @@ impl Checkers {
         }
     }
 
-    pub fn switch_player(&mut self) {
+    fn switch_player(&mut self) {
         if let State::Chaining(move_history) = std::mem::take(&mut self.state) {
             self.history.push((self.current_player, move_history));
         } else {
