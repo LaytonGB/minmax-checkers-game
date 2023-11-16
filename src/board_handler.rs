@@ -45,9 +45,11 @@ impl BoardHandler {
             let (y, x) = board.to_coord(position);
             let directions = Self::get_direction_iter_for_piece(&piece);
             Ok(directions.fold(Vec::with_capacity(4), |mut v, (i, j)| {
+                ((y, x));
                 let (row, col) = (y.wrapping_add(*i), x.wrapping_add(*j));
-                let half_board_size = board.get_board_size() / 2;
-                if row < half_board_size && col < half_board_size {
+                let board_size = board.get_board_size();
+                let half_board_size = board_size / 2;
+                if row < board_size && col < half_board_size {
                     let pos = board.to_position((row, col));
                     if let None = board.0[pos] {
                         v.push((None, pos));

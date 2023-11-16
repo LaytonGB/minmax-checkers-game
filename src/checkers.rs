@@ -8,17 +8,29 @@ use crate::state::State;
 #[derive(Clone, Debug)]
 pub struct Checkers {
     pub current_player: Player,
-    pub human_player: Player,
+    pub bot_player: Option<Player>,
     pub board: Board,
     pub state: State,
     pub history: Vec<(Player, Vec<usize>)>,
 }
 
+impl Default for Checkers {
+    fn default() -> Self {
+        Self {
+            current_player: Player::Red,
+            board: Board::new(8),
+            bot_player: None,
+            state: State::Selecting,
+            history: Vec::new(),
+        }
+    }
+}
+
 impl Checkers {
-    pub fn new(human_player: Player, board_size: usize) -> Self {
+    pub fn new(board_size: usize, bot_player: Option<Player>) -> Self {
         Checkers {
             current_player: Player::Red,
-            human_player,
+            bot_player,
             board: Board::new(board_size),
             state: State::Selecting,
             history: Vec::new(),
@@ -90,11 +102,15 @@ impl Checkers {
     }
 
     pub fn end_turn(&mut self) {
-        match self.state {
+        match (&self).state {
             State::Selecting => todo!("current player loses (cant end turn if can capture)"),
             State::Moving(_) => self.switch_player(),
             State::Chaining(_) => self.switch_player(),
-        }
+        };
+        println!(
+            "\nTURN CHANGE\nIt is now the {} player's turn.\n",
+            self.current_player
+        );
     }
 
     fn switch_player(&mut self) {

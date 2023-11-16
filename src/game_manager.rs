@@ -5,17 +5,23 @@ pub struct GameManager;
 impl GameManager {
     pub fn start(game: &mut Checkers) {
         println!("Red always goes first.");
-        println!("You are the {} player.", game.human_player);
+        if let Some(bot_player) = game.bot_player {
+            println!("You are the {} player.", bot_player.other());
+        }
 
         while BoardHandler::count_player_pieces(&game.board, Player::Red) > 0
             && BoardHandler::count_player_pieces(&game.board, Player::White) > 0
         {
-            if !Self::can_move(game) {
+            if !(Self::can_move(game)) {
                 game.end_turn();
             }
 
             game.print();
-            if game.current_player == game.human_player {
+            if game
+                .bot_player
+                .and_then(|bot_player| Some(bot_player != game.current_player))
+                .unwrap_or(true)
+            {
                 let mut response: Option<(usize, usize)> = None;
                 while response.is_none() {
                     match game.state {
@@ -56,7 +62,8 @@ impl GameManager {
     fn can_move(game: &Checkers) -> bool {
         match game.state {
             State::Selecting => {
-                BoardHandler::movable_pieces_for_player(&game.board, game.current_player).len() > 0
+                (&BoardHandler::movable_pieces_for_player(&game.board, game.current_player)).len()
+                    > 0
             }
             State::Moving(position) => {
                 BoardHandler::get_valid_moves(&game.board, position).len() > 0
