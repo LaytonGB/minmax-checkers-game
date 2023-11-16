@@ -1,4 +1,4 @@
-use crate::{board::Board, diagonal::Diagonal, piece::Piece, player::Player};
+use crate::{board::Board, diagonal::Diagonal, player::Player};
 
 use strum::IntoEnumIterator;
 

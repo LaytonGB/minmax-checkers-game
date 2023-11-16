@@ -1,5 +1,3 @@
-use text_io::Error;
-
 use crate::{board_handler::BoardHandler, checkers::Checkers, player::Player};
 
 pub struct GameManager;
