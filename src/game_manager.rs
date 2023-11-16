@@ -13,6 +13,7 @@ impl GameManager {
             && BoardHandler::count_player_pieces(&game.board, Player::White) > 0
         {
             if !(Self::can_move(game)) {
+                println!("DEBUG: calling game.end_turn() from GameManager");
                 game.end_turn();
             }
 
@@ -85,5 +86,40 @@ impl GameManager {
                 winner
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_can_move() {
+        let mut game = Checkers::default();
+
+        assert!(GameManager::can_move(&game));
+
+        game.select_piece(8).ok();
+        game.move_piece(12).ok();
+
+        assert!(!GameManager::can_move(dbg!(&game)));
+
+        game.end_turn();
+
+        assert!(GameManager::can_move(&game));
+
+        game.select_piece(21).ok();
+        game.move_piece(16).ok();
+
+        assert!(!GameManager::can_move(&game));
+
+        game.end_turn();
+
+        assert!(GameManager::can_move(&game));
+
+        game.select_piece(12).ok();
+        game.move_piece(21).ok();
+
+        assert!(!GameManager::can_move(&game));
     }
 }

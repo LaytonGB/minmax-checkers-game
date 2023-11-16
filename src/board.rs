@@ -128,6 +128,7 @@ mod tests {
         assert_eq!(board.to_coord(0), (0, 1));
         assert_eq!(board.to_coord(1), (0, 3));
         assert_eq!(board.to_coord(4), (1, 0));
+        assert_eq!(board.to_coord(21), (5, 2));
         assert_eq!(board.to_coord(3), (0, 7));
         assert_eq!(board.to_coord(31), (7, 6));
     }
@@ -150,6 +151,7 @@ mod tests {
         assert_eq!(board.to_position((0, 1)), 0);
         assert_eq!(board.to_position((0, 3)), 1);
         assert_eq!(board.to_position((1, 0)), 4);
+        assert_eq!(board.to_position((5, 2)), 21);
         assert_eq!(board.to_position((0, 7)), 3);
         assert_eq!(board.to_position((7, 6)), 31);
     }

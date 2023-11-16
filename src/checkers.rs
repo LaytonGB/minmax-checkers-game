@@ -59,8 +59,7 @@ impl Checkers {
 
     pub fn move_piece(&mut self, new_position: usize) -> Result<usize> {
         let (old_position, valid_moves) = match self.state {
-            State::Selecting => panic!("moving piece without piece to move"),
-
+            State::Selecting => panic!("attempting to move piece without piece to move"),
             State::Moving(old_position) => (
                 old_position,
                 BoardHandler::get_valid_moves(&self.board, old_position),
