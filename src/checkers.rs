@@ -1,3 +1,5 @@
+use anyhow::{anyhow, Result};
+
 use crate::board::Board;
 use crate::board_handler::BoardHandler;
 use crate::player::Player;
@@ -9,6 +11,7 @@ pub struct Checkers {
     pub human_player: Player,
     pub board: Board,
     pub state: State,
+    pub history: Vec<(Player, Vec<usize>)>,
 }
 
 impl Checkers {
@@ -18,63 +21,81 @@ impl Checkers {
             human_player,
             board: Board::new(board_size),
             state: State::Selecting,
+            history: Vec::new(),
         }
     }
 
-    pub fn get_valid_moves_for_piece(&self, piece_pos: usize) -> Vec<usize> {
-        if let Some(piece) = self.board.0[piece_pos] {
-            BoardHandler::get_valid_moves(&self.board, piece_pos, piece.player)
-        } else {
-            Vec::new()
-        }
-    }
-
-    pub fn select_piece(&mut self, selected_piece: usize) -> Option<usize> {
+    pub fn select_piece(&mut self, position: usize) -> Result<usize> {
         if self.state != State::Selecting {
-            panic!("cannot select piece when not in Selecting state");
+            return Err(anyhow!(
+                "a piece can only be selected when in the Selection state",
+            ));
         }
 
-        if self.board.0[selected_piece]
+        if self.board.0[position]
             .and_then(|p| Some(p.player == self.current_player))
             .unwrap_or(false)
         {
-            self.state = State::Moving;
-            Some(selected_piece)
+            self.state = State::Moving(position);
+            Ok(position)
         } else {
-            None
+            Err(anyhow!(
+                "the given position does not contain a selectable piece"
+            ))
         }
     }
 
-    pub fn move_piece(&mut self, piece_start: usize, piece_end: usize) -> Option<usize> {
-        if self
-            .get_valid_moves_for_piece(piece_start)
-            .contains(&piece_end)
-        {
-            BoardHandler::move_piece(&mut self.board, piece_start, piece_end);
-            if self.get_valid_moves_for_piece(piece_end).len() == 0 {
-                self.end_turn_or_cancel_selection();
-            } else if self.state == State::Moving {
-                self.state = State::Chaining;
+    pub fn move_piece(&mut self, new_position: usize) -> Result<usize> {
+        let old_position = match self.state {
+            State::Selecting => panic!("moving piece without piece to move"),
+            State::Moving(old_position) => old_position,
+            State::Chaining(ref past_positions) => *past_positions.last().unwrap(),
+        };
+        let valid_moves = BoardHandler::get_valid_moves(&self.board, old_position);
+        if valid_moves.len() == 0 {
+            if let State::Chaining(_) = self.state {
+                self.end_turn();
+                Err(anyhow!("no valid chaining moves, turn has ended"))
+            } else {
+                panic!("cannot run out of moves in a non-chaining state in this function");
             }
-            Some(piece_end)
+        } else if valid_moves.iter().any(|(_, p)| *p == new_position) {
+            match BoardHandler::move_piece_to(&mut self.board, old_position, new_position) {
+                Ok(_possibly_captured_piece) => {
+                    if let State::Moving(_) = self.state {
+                        self.state = State::Chaining(vec![old_position, new_position]);
+                    } else if let State::Chaining(past_positions) = &mut self.state {
+                        past_positions.push(new_position);
+                    }
+                    Ok(new_position)
+                }
+                Err(e) => Err(e),
+            }
         } else {
-            None
+            Err(anyhow!(
+                "new position is not a valid move for selected piece"
+            ))
         }
     }
 
-    pub fn end_turn_or_cancel_selection(&mut self) {
+    pub fn end_turn(&mut self) {
         match self.state {
-            State::Selecting => todo!("current player loses"),
-            State::Moving => todo!("back to selecting state"),
-            State::Chaining => self.switch_player(),
+            State::Selecting => todo!("current player loses (cant end turn if can capture)"),
+            State::Moving(_) => self.switch_player(),
+            State::Chaining(_) => self.switch_player(),
         }
     }
 
     pub fn switch_player(&mut self) {
+        if let State::Chaining(move_history) = std::mem::take(&mut self.state) {
+            self.history.push((self.current_player, move_history));
+        } else {
+            panic!("cannot switch player without being in chaining state");
+        }
         match self.current_player {
             Player::Red => self.current_player = Player::White,
             Player::White => self.current_player = Player::Red,
-        }
+        };
     }
 
     pub fn print(&self) {

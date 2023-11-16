@@ -1,6 +1,7 @@
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Default, Debug)]
 pub enum State {
+    #[default]
     Selecting,
-    Moving,
-    Chaining,
+    Moving(usize),
+    Chaining(Vec<usize>),
 }
