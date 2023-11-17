@@ -1,33 +1,22 @@
-use std::fmt::Display;
-
 use crate::player::Player;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Piece {
-    pub is_king: bool,
-    pub player: Player,
+    is_king: bool,
+    player: Player,
 }
 
 impl Piece {
-    pub fn new(player: Player) -> Self {
-        Piece {
+    pub fn red() -> Piece {
+        Self {
             is_king: false,
-            player,
+            player: Player::Red,
         }
     }
-}
 
-impl Display for Piece {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match (self.player, self.is_king) {
-                (Player::Red, true) => "RK",
-                (Player::Red, false) => "R",
-                (Player::White, true) => "WK",
-                (Player::White, false) => "W",
-            }
-        )
+    pub fn white() -> Piece {
+        Self {
+            is_king: false,
+            player: Player::White,
+        }
     }
 }
