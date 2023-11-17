@@ -1,7 +1,8 @@
 use strum::Display;
 
-#[derive(Clone, Copy, PartialEq, Eq, Display, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Default, Display, Debug)]
 pub enum Player {
+    #[default]
     Red,
     White,
 }

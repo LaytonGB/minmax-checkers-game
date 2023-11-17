@@ -22,6 +22,7 @@ use crate::piece::Piece;
 /// assert_eq!(board.to_position((4, 5)), 18);
 /// ```
 ///
+#[derive(Debug)]
 pub struct Board {
     board: Vec<Option<Piece>>,
     size: usize,
@@ -59,6 +60,12 @@ impl Board {
     pub fn to_position(&self, coord: (usize, usize)) -> usize {
         let (row, col) = coord;
         row * self.half_size + col / 2
+    }
+}
+
+impl Default for Board {
+    fn default() -> Self {
+        Self::new(8)
     }
 }
 

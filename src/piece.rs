@@ -1,5 +1,6 @@
 use crate::player::Player;
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Piece {
     is_king: bool,
     player: Player,
