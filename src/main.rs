@@ -1,3 +1,6 @@
+use kar_checkers_minmax::checkers::Checkers;
+
 fn main() {
-    println!("Hello world!");
+    let mut game = Checkers::new(None);
+    game.start();
 }

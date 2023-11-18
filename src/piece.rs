@@ -1,6 +1,6 @@
 use crate::{constants::DIRECTIONS, player::Player};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Piece {
     is_king: bool,
     player: Player,

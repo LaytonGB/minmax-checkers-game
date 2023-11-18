@@ -18,7 +18,7 @@ use crate::{piece::Piece, player::Player};
 /// ```
 /// use kar_checkers_minmax::board::Board;
 /// let board = Board::new(8);
-/// assert_eq!(board.to_coords(16), (4, 1));
+/// assert_eq!(board.to_coord(16), (4, 1));
 /// assert_eq!(board.to_position((4, 5)), 18);
 /// ```
 #[derive(Debug)]
@@ -30,11 +30,8 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new(board_size: usize) -> Board {
-        if board_size % 2 == 1 || board_size < 6 {
-            panic!("invalid board size");
-        }
-
+    pub fn new(board_size: usize) -> Self {
+        Self::validate_board_size(board_size);
         let half_size = board_size / 2;
         let position_count = board_size.pow(2) / 2;
         let board = (0..half_size * 3)
@@ -51,26 +48,67 @@ impl Board {
         }
     }
 
+    /// For testing. Creates a Board with a supplied layout.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kar_checkers_minmax::{board::Board, piece::Piece};
+    /// let board = Board::with_layout(8, vec![
+    ///     Some(Piece::red()), Some(Piece::red()), Some(Piece::red()), Some(Piece::red()),
+    ///     Some(Piece::red()), Some(Piece::red()), Some(Piece::red()), Some(Piece::red()),
+    ///     Some(Piece::red()), Some(Piece::red()), Some(Piece::red()), Some(Piece::red()),
+    ///     None, None, None, None,
+    ///     None, None, None, None,
+    ///     Some(Piece::white()), Some(Piece::white()), Some(Piece::white()), Some(Piece::white()),
+    ///     Some(Piece::white()), Some(Piece::white()), Some(Piece::white()), Some(Piece::white()),
+    ///     Some(Piece::white()), Some(Piece::white()), Some(Piece::white()), Some(Piece::white()),
+    /// ]);
+    /// assert_eq!(board, Board::new(8));
+    /// ```
+    pub fn with_layout(board_size: usize, board: Vec<Option<Piece>>) -> Self {
+        Self::validate_board_size(board_size);
+        Self {
+            board,
+            size: board_size,
+            half_size: board_size / 2,
+            position_count: board_size.pow(2) / 2,
+        }
+    }
+
+    #[inline]
+    fn validate_board_size(board_size: usize) {
+        if board_size % 2 == 1 || board_size < 6 {
+            panic!("invalid board size");
+        }
+    }
+
+    #[inline]
     pub fn size(&self) -> usize {
         self.size
     }
 
+    #[inline]
     pub fn half_size(&self) -> usize {
         self.half_size
     }
 
+    #[inline]
     pub fn position_count(&self) -> usize {
         self.position_count
     }
 
+    #[inline]
     pub fn get(&self, position: usize) -> Option<Piece> {
         self.board[position]
     }
 
+    #[inline]
     pub fn set(&mut self, position: usize, new_value: Option<Piece>) {
         self.board[position] = new_value;
     }
 
+    #[inline]
     pub fn is_within_bounds(&self, coord: (usize, usize)) -> bool {
         let (y, x) = coord;
         y < self.size && x < self.size
@@ -100,6 +138,12 @@ impl Board {
 impl Default for Board {
     fn default() -> Self {
         Self::new(8)
+    }
+}
+
+impl PartialEq for Board {
+    fn eq(&self, other: &Self) -> bool {
+        self.size == other.size && self.board == other.board
     }
 }
 
