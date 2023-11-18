@@ -1,6 +1,6 @@
 use std::{fmt::Display, iter::repeat};
 
-use tabled::{col, row, tables::IterTable};
+use tabled::tables::IterTable;
 
 use crate::{piece::Piece, player::Player};
 
