@@ -1,4 +1,4 @@
-use crate::piece::Piece;
+use crate::{piece::Piece, player::Player};
 
 /// A struct that contains a board with numbered posiitions matching those shown here.
 /// Use the [`to_coord`] and [`to_position`] methods to translate positions from left example
@@ -21,7 +21,6 @@ use crate::piece::Piece;
 /// assert_eq!(board.to_coords(16), (4, 1));
 /// assert_eq!(board.to_position((4, 5)), 18);
 /// ```
-///
 #[derive(Debug)]
 pub struct Board {
     board: Vec<Option<Piece>>,
@@ -52,7 +51,42 @@ impl Board {
         }
     }
 
-    pub fn to_coords(&self, position: usize) -> (usize, usize) {
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn half_size(&self) -> usize {
+        self.half_size
+    }
+
+    pub fn position_count(&self) -> usize {
+        self.position_count
+    }
+
+    pub fn get(&self, position: usize) -> Option<Piece> {
+        self.board[position]
+    }
+
+    pub fn set(&mut self, position: usize, new_value: Option<Piece>) {
+        self.board[position] = new_value;
+    }
+
+    pub fn is_within_bounds(&self, coord: (usize, usize)) -> bool {
+        let (y, x) = coord;
+        y < self.size && x < self.size
+    }
+
+    pub fn get_player_piece_positions(&self, player: Player) -> impl Iterator<Item = usize> + '_ {
+        self.board.iter().enumerate().filter_map(move |(i, p)| {
+            if p.and_then(|p| Some(p.player() == player)).unwrap_or(false) {
+                Some(i)
+            } else {
+                None
+            }
+        })
+    }
+
+    pub fn to_coord(&self, position: usize) -> (usize, usize) {
         let row = position / self.half_size;
         (row, position % self.half_size * 2 + (row + 1) % 2)
     }
@@ -77,12 +111,12 @@ mod tests {
     fn test_to_coords() {
         let board = Board::new(8);
 
-        assert_eq!(board.to_coords(0), (0, 1));
-        assert_eq!(board.to_coords(3), (0, 7));
-        assert_eq!(board.to_coords(4), (1, 0));
-        assert_eq!(board.to_coords(5), (1, 2));
-        assert_eq!(board.to_coords(26), (6, 5));
-        assert_eq!(board.to_coords(31), (7, 6));
+        assert_eq!(board.to_coord(0), (0, 1));
+        assert_eq!(board.to_coord(3), (0, 7));
+        assert_eq!(board.to_coord(4), (1, 0));
+        assert_eq!(board.to_coord(5), (1, 2));
+        assert_eq!(board.to_coord(26), (6, 5));
+        assert_eq!(board.to_coord(31), (7, 6));
     }
 
     #[test]
