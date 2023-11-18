@@ -16,7 +16,7 @@ impl Move {
         }
     }
 
-    pub fn capture(
+    pub fn new_capture(
         start: usize,
         end: usize,
         capture_position: usize,
@@ -37,6 +37,11 @@ impl Move {
     #[inline]
     pub fn end(&self) -> usize {
         self.end
+    }
+
+    #[inline]
+    pub fn capture(&self) -> Option<(usize, Piece)> {
+        self.capture
     }
 
     #[inline]

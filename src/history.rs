@@ -23,6 +23,14 @@ impl History {
             false
         }
     }
+
+    pub fn push(&mut self, player: Player, r#move: Move) {
+        if self.get_last_player().unwrap_or(player.other()) == player {
+            self.0.last_mut().map(|(_, moves)| moves.push(r#move));
+        } else {
+            self.0.push((player, vec![r#move]));
+        }
+    }
 }
 
 impl Default for History {

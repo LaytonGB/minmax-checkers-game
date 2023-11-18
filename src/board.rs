@@ -1,3 +1,7 @@
+use std::{fmt::Display, iter::repeat};
+
+use tabled::{col, row, tables::IterTable};
+
 use crate::{piece::Piece, player::Player};
 
 /// A struct that contains a board with numbered posiitions matching those shown here.
@@ -104,8 +108,23 @@ impl Board {
     }
 
     #[inline]
+    pub fn get_mut(&mut self, position: usize) -> Option<&mut Piece> {
+        self.board[position].as_mut()
+    }
+
+    #[inline]
     pub fn set(&mut self, position: usize, new_value: Option<Piece>) {
         self.board[position] = new_value;
+    }
+
+    #[inline]
+    pub fn r#move(&mut self, start_pos: usize, end_pos: usize) {
+        self.board[end_pos] = std::mem::take(&mut self.board[start_pos]);
+    }
+
+    #[inline]
+    pub fn take(&mut self, position: usize) -> Option<Piece> {
+        std::mem::take(&mut self.board[position])
     }
 
     #[inline]
@@ -138,6 +157,34 @@ impl Board {
 impl Default for Board {
     fn default() -> Self {
         Self::new(8)
+    }
+}
+
+impl Display for Board {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let with_squares = self
+            .board
+            .iter()
+            .zip(repeat("🟫".to_owned()))
+            .enumerate()
+            .flat_map(|(i, (p, sq))| {
+                if (i / self.half_size) % 2 == 0 {
+                    vec![
+                        sq,
+                        p.and_then(|p| Some(format!("{}", p)))
+                            .unwrap_or("⬛".to_owned()),
+                    ]
+                } else {
+                    vec![
+                        p.and_then(|p| Some(format!("{}", p)))
+                            .unwrap_or("⬛".to_owned()),
+                        sq,
+                    ]
+                }
+            })
+            .collect::<Vec<String>>();
+        let rows = with_squares.chunks(self.size).map(|strings| strings);
+        write!(f, "{}", IterTable::new(rows).to_string())
     }
 }
 
