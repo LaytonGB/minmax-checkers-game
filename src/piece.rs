@@ -52,7 +52,7 @@ impl Display for Piece {
             match (self.player, self.is_king) {
                 (Player::Red, true) => "😡",
                 (Player::Red, false) => "🔴",
-                (Player::White, true) => "🐻‍❄️",
+                (Player::White, true) => "⚾",
                 (Player::White, false) => "⚪",
             }
             .to_owned()

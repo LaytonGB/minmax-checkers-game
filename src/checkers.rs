@@ -46,7 +46,7 @@ impl Checkers {
                 todo!("bot turn");
             } else {
                 while self.can_move() {
-                    self.make_a_move();
+                    self.make_a_move_from_terminal();
                 }
             }
 
@@ -97,18 +97,18 @@ impl Checkers {
     }
 
     fn can_move(&self) -> bool {
-        !self.selectable_positions.is_empty()
+        !(self.selectable_positions).is_empty()
     }
 
     fn get_valid_moves(&self) -> Vec<Move> {
         let all_moves = self.all_moves_for_player(self.current_player);
         let must_cap = self.selected_piece.is_some()
-            && self
+            && (self
                 .history
                 .get_last_player()
                 .unwrap_or(self.current_player.other())
                 == self.current_player
-            && self.history.last_move_was_capture()
+                || self.history.last_move_was_capture())
             || all_moves.iter().any(|m| m.is_capture());
         if must_cap {
             all_moves.into_iter().filter(|m| m.is_capture()).collect()
@@ -146,24 +146,28 @@ impl Checkers {
                             if self.board.is_within_bounds(end_coord) {
                                 let end_pos = self.board.to_position(end_coord);
                                 if self.board.get(end_pos).is_none() {
-                                    Some(Move::new_capture(position, end_pos, cap_pos, cap_piece))
-                                } else {
-                                    None
+                                    return Some(Move::new_capture(
+                                        position, end_pos, cap_pos, cap_piece,
+                                    ));
                                 }
-                            } else {
-                                None
                             }
-                        } else {
-                            None
                         }
+                        return None;
                     } else {
-                        Some(Move::new(position, cap_pos))
+                        return Some(Move::new(position, cap_pos));
                     }
-                } else {
-                    None
                 }
+                None
             })
             .collect()
+    }
+
+    pub fn make_a_move_from_api(&mut self, row: usize, col: usize) {
+        if let Some(position) = self.selected_piece {
+            self.move_piece(position, row, col);
+        } else {
+            self.select_piece(row, col);
+        }
     }
 
     /// The player move function. Includes a player selecting a piece, moving a piece, or capturing a piece.
@@ -171,7 +175,7 @@ impl Checkers {
     /// After any moving or capturing turn this function adds to [`self.history`].
     ///
     /// If the available valid moves are changed, this method updates [`self.valid_moves`].
-    fn make_a_move(&mut self) {
+    fn make_a_move_from_terminal(&mut self) {
         if let Some(position) = self.selected_piece {
             loop {
                 println!(
@@ -187,43 +191,8 @@ impl Checkers {
                 let row: Result<usize, _> = try_read!();
                 let col: Result<usize, _> = try_read!();
                 if let (Ok(row), Ok(col)) = (row, col) {
-                    let coord = (row, col);
-                    let end_pos = self.board.to_position(coord);
-                    if let Some(m) = self
-                        .valid_moves
-                        .iter()
-                        .find(|m| m.start() == position && m.end() == end_pos)
-                    {
-                        self.board.r#move(position, end_pos);
-                        if let Some((cap_pos, cap_piece)) = m.capture() {
-                            self.board.take(cap_pos);
-                            if cap_piece.is_king() {
-                                self.board.get_mut(end_pos).map(|p| p.to_king());
-                                println!(
-                                    "\nCAPTURED KING PIECE {:?}",
-                                    self.board.to_coord(cap_pos)
-                                );
-                            } else {
-                                println!("\nCAPTURED PIECE {:?}", self.board.to_coord(cap_pos));
-                            }
-
-                            self.history.push(
-                                self.current_player,
-                                Move::new_capture(position, end_pos, cap_pos, cap_piece),
-                            );
-                        } else {
-                            self.history
-                                .push(self.current_player, Move::new(position, end_pos));
-                        }
-                        println!(
-                            "PIECE MOVED {:?} -> {:?}\n",
-                            coord,
-                            self.board.to_coord(end_pos)
-                        );
-                        self.update_valid_moves();
+                    if self.move_piece(position, row, col) {
                         break;
-                    } else {
-                        println!("ERROR: Invalid position {:?}, please try again.", coord);
                     }
                 } else {
                     println!("ERROR: I didn't catch that, please input your zero-indexed coordinates in format \"ROW <space> COLUMN\".");
@@ -242,20 +211,67 @@ impl Checkers {
                 let row: Result<usize, _> = try_read!();
                 let col: Result<usize, _> = try_read!();
                 if let (Ok(row), Ok(col)) = (row, col) {
-                    let coord = (row, col);
-                    let pos = self.board.to_position(coord);
-                    if self.selectable_positions.contains(&pos) {
-                        self.selected_piece = Some(pos);
-                        println!("\nPIECE SELECTED\n");
-                        self.update_selectable_positions();
+                    if self.select_piece(row, col) {
                         break;
-                    } else {
-                        println!("ERROR: Invalid position {:?}, please try again.", coord);
                     }
                 } else {
                     println!("ERROR: I didn't catch that, please input your zero-indexed coordinates in format \"ROW <space> COLUMN\".");
                 }
             }
+        }
+    }
+
+    fn move_piece(&mut self, position: usize, row: usize, col: usize) -> bool {
+        let coord = (row, col);
+        let end_pos = self.board.to_position(coord);
+        if let Some(m) = self
+            .valid_moves
+            .iter()
+            .find(|m| m.start() == position && m.end() == end_pos)
+        {
+            self.board.r#move(position, end_pos);
+            if let Some((cap_pos, cap_piece)) = m.capture() {
+                self.board.take(cap_pos);
+                if cap_piece.is_king() {
+                    self.board.get_mut(end_pos).map(|p| p.to_king());
+                    println!("\nCAPTURED KING PIECE {:?}", self.board.to_coord(cap_pos));
+                } else {
+                    println!("\nCAPTURED PIECE {:?}", self.board.to_coord(cap_pos));
+                }
+
+                self.history.push(
+                    self.current_player,
+                    Move::new_capture(position, end_pos, cap_pos, cap_piece),
+                );
+                self.selected_piece = Some(end_pos); // NOTE selected piece update enables chaining captures
+            } else {
+                self.history
+                    .push(self.current_player, Move::new(position, end_pos));
+            }
+            println!(
+                "PIECE MOVED {:?} -> {:?}\n",
+                coord,
+                self.board.to_coord(end_pos)
+            );
+            self.update_valid_moves();
+            true
+        } else {
+            println!("ERROR: Invalid position {:?}, please try again.", coord);
+            false
+        }
+    }
+
+    fn select_piece(&mut self, row: usize, col: usize) -> bool {
+        let coord = (row, col);
+        let pos = self.board.to_position(coord);
+        if self.selectable_positions.contains(&pos) {
+            self.selected_piece = Some(pos);
+            println!("\nPIECE SELECTED\n");
+            self.update_selectable_positions();
+            true
+        } else {
+            println!("ERROR: Invalid position {:?}, please try again.", coord);
+            false
         }
     }
 }

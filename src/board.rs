@@ -165,19 +165,19 @@ impl Display for Board {
         let with_squares = self
             .board
             .iter()
-            .zip(repeat("🟫".to_owned()))
+            .zip(repeat("".to_owned()))
             .enumerate()
             .flat_map(|(i, (p, sq))| {
                 if (i / self.half_size) % 2 == 0 {
                     vec![
                         sq,
                         p.and_then(|p| Some(format!("{}", p)))
-                            .unwrap_or("⬛".to_owned()),
+                            .unwrap_or("".to_owned()),
                     ]
                 } else {
                     vec![
                         p.and_then(|p| Some(format!("{}", p)))
-                            .unwrap_or("⬛".to_owned()),
+                            .unwrap_or("".to_owned()),
                         sq,
                     ]
                 }
