@@ -1,6 +1,6 @@
 use text_io::try_read;
 
-use crate::{board::Board, history::History, player::Player, r#move::Move};
+use crate::{board::Board, history::History, io, player::Player, r#move::Move};
 
 #[derive(Default, Debug)]
 pub struct Checkers {
@@ -174,11 +174,7 @@ impl Checkers {
         }
     }
 
-    /// The player move function. Includes a player selecting a piece, moving a piece, or capturing a piece.
-    ///
-    /// After any moving or capturing turn this function adds to [`self.history`].
-    ///
-    /// If the available valid moves are changed, this method updates [`self.valid_moves`].
+    #[cfg(feature = "standalone")]
     fn make_a_move_from_terminal(&mut self) {
         if let Some(position) = self.selected_piece {
             loop {
@@ -212,20 +208,33 @@ impl Checkers {
                         .map(|p| self.board.to_coord(*p))
                         .collect::<Vec<(usize, usize)>>()
                 );
-                let row: Result<usize, _> = try_read!();
-                let col: Result<usize, _> = try_read!();
-                if let (Ok(row), Ok(col)) = (row, col) {
-                    if self.select_piece(row, col) {
-                        break;
+                let input = dbg!(io::get_n_parts(2));
+                if input.len() >= 2 {
+                    let row: Result<usize, _> = try_read!("{}", input[0].bytes());
+                    let col: Result<usize, _> = try_read!("{}", input[1].bytes());
+                    if let (Ok(row), Ok(col)) = (row, col) {
+                        if self.select_piece(row, col) {
+                            break;
+                        }
+                    } else if input[0] == "undo" {
+                        self.undo_last_move();
+                        continue;
                     }
-                } else {
                     println!("ERROR: I didn't catch that, please input your zero-indexed coordinates in format \"ROW <space> COLUMN\".");
+                } else if !input.is_empty() && input[0] == "undo" {
+                    self.undo_last_move();
+                    break;
                 }
             }
         }
     }
 
     fn move_piece(&mut self, position: usize, row: usize, col: usize) -> bool {
+        let started_as_king = self
+            .board
+            .get(position)
+            .expect("piece must exist")
+            .is_king();
         let coord = (row, col);
         let end_pos = self.board.to_position(coord);
         if let Some(m) = self
@@ -245,12 +254,18 @@ impl Checkers {
 
                 self.history.push(
                     self.current_player,
+                    started_as_king,
                     Move::new_capture(position, end_pos, cap_pos, cap_piece),
+                    self.board.get(end_pos).expect("just moved here").is_king(),
                 );
                 self.king_if_end_row(end_pos);
             } else {
-                self.history
-                    .push(self.current_player, Move::new(position, end_pos));
+                self.history.push(
+                    self.current_player,
+                    started_as_king,
+                    Move::new(position, end_pos),
+                    self.board.get(end_pos).expect("just moved here").is_king(),
+                );
             }
             println!(
                 "PIECE MOVED {:?} -> {:?}\n",
@@ -292,6 +307,25 @@ impl Checkers {
                     piece.to_king();
                 }
             }
+        }
+    }
+
+    pub fn undo_last_move(&mut self) {
+        let last_turn_moves = self.history.pop_last_turn();
+        if let Some(mut moves) = last_turn_moves {
+            let started_last_turn_as_king = self.history.started_last_turn_as_king();
+            while let Some(m) = moves.pop() {
+                let mut piece = self.board.take(m.end()).expect("ended turn here");
+                if !started_last_turn_as_king {
+                    piece.remove_king();
+                }
+                if let Some((cap_pos, cap_piece)) = m.capture() {
+                    self.board.set(cap_pos, Some(cap_piece));
+                }
+                self.board.set(m.start(), Some(piece));
+            }
+            self.selectable_positions = Vec::new();
+            println!("\nLAST MOVE UNDONE");
         }
     }
 }

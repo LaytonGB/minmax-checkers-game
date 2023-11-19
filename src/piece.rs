@@ -35,6 +35,10 @@ impl Piece {
         self.is_king = true;
     }
 
+    pub fn remove_king(&mut self) {
+        self.is_king = false;
+    }
+
     pub fn directions(&self) -> &[(usize, usize)] {
         match (self.is_king, self.player) {
             (true, _) => &DIRECTIONS[..],

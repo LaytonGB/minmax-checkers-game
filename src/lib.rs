@@ -1,3 +1,6 @@
+#[cfg(feature = "standalone")]
+pub mod io;
+
 pub mod board;
 pub mod cache;
 pub mod checkers;

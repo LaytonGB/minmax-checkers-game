@@ -10,3 +10,7 @@ anyhow = "1.0.75"
 strum = { version = "0.25.0", features = ["derive"] }
 tabled = "0.14.0"
 text_io = "0.1.12"
+
+[features]
+default = ["standalone"]
+standalone = []
