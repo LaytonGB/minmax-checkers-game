@@ -101,14 +101,18 @@ impl Checkers {
     }
 
     fn get_valid_moves(&self) -> Vec<Move> {
+        let is_first_move_this_turn = self
+            .history
+            .get_last_player()
+            .unwrap_or(self.current_player.other())
+            != self.current_player;
+        if !is_first_move_this_turn && !self.history.last_move_was_capture() {
+            return Vec::new();
+        }
+
         let all_moves = self.all_moves_for_player(self.current_player);
         let must_cap = self.selected_piece.is_some()
-            && (self
-                .history
-                .get_last_player()
-                .unwrap_or(self.current_player.other())
-                == self.current_player
-                || self.history.last_move_was_capture())
+            && (is_first_move_this_turn || self.history.last_move_was_capture())
             || all_moves.iter().any(|m| m.is_capture());
         if must_cap {
             all_moves.into_iter().filter(|m| m.is_capture()).collect()
@@ -243,7 +247,7 @@ impl Checkers {
                     self.current_player,
                     Move::new_capture(position, end_pos, cap_pos, cap_piece),
                 );
-                self.selected_piece = Some(end_pos); // NOTE selected piece update enables chaining captures
+                self.king_if_end_row(end_pos);
             } else {
                 self.history
                     .push(self.current_player, Move::new(position, end_pos));
@@ -253,6 +257,7 @@ impl Checkers {
                 coord,
                 self.board.to_coord(end_pos)
             );
+            self.selected_piece = Some(end_pos); // NOTE selected piece update enables chaining captures
             self.update_valid_moves();
             true
         } else {
@@ -272,6 +277,21 @@ impl Checkers {
         } else {
             println!("ERROR: Invalid position {:?}, please try again.", coord);
             false
+        }
+    }
+
+    fn king_if_end_row(&mut self, position: usize) {
+        let (pos_row, _) = self.board.to_coord(position);
+        if let Some(piece) = self.board.get_mut(position) {
+            if !piece.is_king() {
+                let end_row: usize = match piece.player() {
+                    Player::Red => 7,
+                    Player::White => 0,
+                };
+                if pos_row == end_row {
+                    piece.to_king();
+                }
+            }
         }
     }
 }
@@ -296,10 +316,5 @@ mod tests {
             &checkers.moves_for_pos(8)[..],
             &vec![Move::new(8, 12), Move::new(8, 13)][..]
         ));
-    }
-
-    #[test]
-    fn test_make_a_move() {
-        todo!("TEST MAKE A MOVE");
     }
 }
