@@ -1,4 +1,6 @@
+pub mod bot_choice;
 pub mod checkers;
+pub mod player;
 
 #[cfg(feature = "standalone")]
 pub(crate) mod io;
@@ -11,4 +13,3 @@ pub(crate) mod history;
 pub(crate) mod minmax;
 pub(crate) mod r#move;
 pub(crate) mod piece;
-pub(crate) mod player;

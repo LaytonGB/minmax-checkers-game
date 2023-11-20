@@ -25,7 +25,7 @@ impl MinMax {
         //      do: calculate score, return score and move
         // recurse case: not (win or lose)
         //      do: recurse for each valid move, return best
-        let valid_moves: Vec<usize> = game.selectable_positions().iter().map(|p| *p).collect();
+        let valid_moves: Vec<usize> = game.selectable_positions().to_vec();
         let is_current_player = game.current_player() == bot_player;
         let mut best_score = if is_current_player {
             usize::MIN

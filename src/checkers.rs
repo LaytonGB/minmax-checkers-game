@@ -1,6 +1,9 @@
 use text_io::try_read;
 
-use crate::{board::Board, bot::Bot, history::History, io, player::Player, r#move::Move};
+use crate::{
+    board::Board, bot::Bot, bot_choice::BotChoice, history::History, io, minmax::MinMax,
+    player::Player, r#move::Move,
+};
 
 #[derive(Default, Debug)]
 pub struct Checkers {
@@ -28,14 +31,30 @@ impl Clone for Checkers {
 }
 
 impl Checkers {
-    pub fn new(bot_player: Option<(Player, Box<dyn Bot>)>) -> Self {
+    pub fn new(bot_player: Option<(Player, BotChoice)>) -> Self {
+        let bot_player = if let Some((player, bot_choice)) = bot_player {
+            let bot: Box<dyn Bot> = match bot_choice {
+                BotChoice::MinMax => Box::new(MinMax),
+            };
+            Some((player, bot))
+        } else {
+            None
+        };
         Self {
             bot_player,
             ..Default::default()
         }
     }
 
-    pub fn custom_board(board_size: usize, bot_player: Option<(Player, Box<dyn Bot>)>) -> Self {
+    pub fn custom_board(board_size: usize, bot_player: Option<(Player, BotChoice)>) -> Self {
+        let bot_player = if let Some((player, bot_choice)) = bot_player {
+            let bot: Box<dyn Bot> = match bot_choice {
+                BotChoice::MinMax => Box::new(MinMax),
+            };
+            Some((player, bot))
+        } else {
+            None
+        };
         Self {
             board: Board::new(board_size),
             bot_player,
@@ -60,7 +79,13 @@ impl Checkers {
                 .and_then(|p| Some(p.0 == self.current_player))
                 .unwrap_or(false)
             {
-                todo!("bot turn");
+                let bot_move = self
+                    .bot_player
+                    .as_ref()
+                    .unwrap()
+                    .1
+                    .get_next_move(&self, None);
+                self.make_a_move_from_api(bot_move);
             } else {
                 while self.can_move() {
                     self.make_a_move_from_terminal();
@@ -356,6 +381,7 @@ impl Checkers {
                 self.board.set(m.start(), Some(piece));
             }
             self.selectable_positions = Vec::new();
+            #[cfg(feature = "standalone")]
             println!("\nLAST MOVE UNDONE");
         }
     }
