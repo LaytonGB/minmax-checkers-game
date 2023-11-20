@@ -25,7 +25,7 @@ use crate::{piece::Piece, player::Player};
 /// assert_eq!(board.to_coord(16), (4, 1));
 /// assert_eq!(board.to_position((4, 5)), 18);
 /// ```
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Board {
     board: Vec<Option<Piece>>,
     size: usize,

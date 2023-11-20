@@ -1,27 +1,41 @@
 use text_io::try_read;
 
-use crate::{board::Board, history::History, io, player::Player, r#move::Move};
+use crate::{board::Board, bot::Bot, history::History, io, player::Player, r#move::Move};
 
 #[derive(Default, Debug)]
 pub struct Checkers {
     board: Board,
     current_player: Player,
-    bot_player: Option<Player>,
+    bot_player: Option<(Player, Box<dyn Bot>)>,
     selected_piece: Option<usize>,
     valid_moves: Vec<Move>,
     selectable_positions: Vec<usize>,
     history: History,
 }
 
+impl Clone for Checkers {
+    fn clone(&self) -> Self {
+        Self {
+            board: self.board.clone(),
+            current_player: self.current_player.clone(),
+            bot_player: None,
+            selected_piece: self.selected_piece.clone(),
+            valid_moves: self.valid_moves.clone(),
+            selectable_positions: self.selectable_positions.clone(),
+            history: self.history.clone(),
+        }
+    }
+}
+
 impl Checkers {
-    pub fn new(bot_player: Option<Player>) -> Self {
+    pub fn new(bot_player: Option<(Player, Box<dyn Bot>)>) -> Self {
         Self {
             bot_player,
             ..Default::default()
         }
     }
 
-    pub fn custom_board(board_size: usize, bot_player: Option<Player>) -> Self {
+    pub fn custom_board(board_size: usize, bot_player: Option<(Player, Box<dyn Bot>)>) -> Self {
         Self {
             board: Board::new(board_size),
             bot_player,
@@ -29,18 +43,21 @@ impl Checkers {
         }
     }
 
-    pub fn show_board(&self) {
+    #[cfg(feature = "standalone")]
+    fn show_board(&self) {
         println!("{}", self.board);
     }
 
     pub fn start(&mut self) {
         self.update_valid_moves();
         loop {
+            #[cfg(feature = "standalone")]
             self.show_board();
 
             if self
                 .bot_player
-                .and_then(|p| Some(p == self.current_player))
+                .as_ref()
+                .and_then(|p| Some(p.0 == self.current_player))
                 .unwrap_or(false)
             {
                 todo!("bot turn");
@@ -51,14 +68,17 @@ impl Checkers {
             }
 
             self.end_turn();
+            self.announce_new_turn();
             if !self.can_move() {
-                self.end_game(Some(self.current_player.other()));
+                #[cfg(feature = "standalone")]
+                self.announce_winner(Some(self.current_player.other()));
                 break;
             }
         }
     }
 
-    fn end_game(&mut self, winner: Option<Player>) {
+    #[cfg(feature = "standalone")]
+    fn announce_winner(&mut self, winner: Option<Player>) {
         if let Some(winner) = winner {
             println!("!!! {} PLAYER WINS !!!", winner);
         } else {
@@ -70,6 +90,10 @@ impl Checkers {
         self.selected_piece = None;
         self.current_player = self.current_player.other();
         self.update_valid_moves();
+    }
+
+    #[cfg(feature = "standalone")]
+    fn announce_new_turn(&self) {
         println!("TURN CHANGE\n{} TURN:", self.current_player);
     }
 
@@ -121,6 +145,12 @@ impl Checkers {
         }
     }
 
+    pub fn get_player_piece_count(&self, player: Player) -> usize {
+        self.board
+            .get_player_piece_positions(player)
+            .fold(0, |x, _| x + 1)
+    }
+
     fn all_moves_for_player(&self, player: Player) -> Vec<Move> {
         let piece_positions = self.board.get_player_piece_positions(player);
         piece_positions
@@ -166,7 +196,8 @@ impl Checkers {
             .collect()
     }
 
-    pub fn make_a_move_from_api(&mut self, row: usize, col: usize) {
+    pub fn make_a_move_from_api(&mut self, pos: usize) {
+        let (row, col) = self.board.to_coord(pos);
         if let Some(position) = self.selected_piece {
             self.move_piece(position, row, col);
         } else {
@@ -327,6 +358,14 @@ impl Checkers {
             self.selectable_positions = Vec::new();
             println!("\nLAST MOVE UNDONE");
         }
+    }
+
+    pub fn selectable_positions(&self) -> &[usize] {
+        self.selectable_positions.as_ref()
+    }
+
+    pub fn current_player(&self) -> Player {
+        self.current_player
     }
 }
 

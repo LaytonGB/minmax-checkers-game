@@ -1,6 +1,6 @@
 use crate::{player::Player, r#move::Move};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct History(pub Vec<(Player, bool, Vec<Move>, bool)>);
 
 impl History {

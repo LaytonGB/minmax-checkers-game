@@ -1,11 +1,14 @@
-#[cfg(feature = "standalone")]
-pub mod io;
-
-pub mod board;
-pub mod cache;
 pub mod checkers;
-pub mod constants;
-pub mod history;
-pub mod r#move;
-pub mod piece;
-pub mod player;
+
+#[cfg(feature = "standalone")]
+pub(crate) mod io;
+
+pub(crate) mod board;
+pub(crate) mod bot;
+pub(crate) mod cache;
+pub(crate) mod constants;
+pub(crate) mod history;
+pub(crate) mod minmax;
+pub(crate) mod r#move;
+pub(crate) mod piece;
+pub(crate) mod player;
