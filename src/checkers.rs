@@ -2,7 +2,7 @@ use text_io::try_read;
 
 use crate::{
     board::Board, bot::Bot, bot_choice::BotChoice, history::History, io, minmax::MinMax,
-    player::Player, r#move::Move,
+    piece::Piece, player::Player, r#move::Move,
 };
 
 #[derive(Default, Debug)]
@@ -63,7 +63,7 @@ impl Checkers {
     }
 
     #[cfg(feature = "standalone")]
-    fn show_board(&self) {
+    pub fn show_board(&self) {
         println!("{}", self.board);
     }
 
@@ -84,7 +84,7 @@ impl Checkers {
                     .as_ref()
                     .unwrap()
                     .1
-                    .get_next_move(&self, None);
+                    .get_next_move_with_display(&self, None);
                 self.make_a_move_from_api(bot_move);
             } else {
                 while self.can_move() {
@@ -205,15 +205,32 @@ impl Checkers {
                             if self.board.is_within_bounds(end_coord) {
                                 let end_pos = self.board.to_position(end_coord);
                                 if self.board.get(end_pos).is_none() {
+                                    let starts_as_king = piece.is_king();
+                                    let ends_as_king = starts_as_king
+                                        || end_coord.0 == Self::end_row_for_piece(&piece)
+                                        || cap_piece.is_king();
                                     return Some(Move::new_capture(
-                                        position, end_pos, cap_pos, cap_piece,
+                                        position,
+                                        end_pos,
+                                        starts_as_king,
+                                        ends_as_king,
+                                        cap_pos,
+                                        cap_piece,
                                     ));
                                 }
                             }
                         }
                         return None;
                     } else {
-                        return Some(Move::new(position, cap_pos));
+                        let starts_as_king = piece.is_king();
+                        let ends_as_king =
+                            starts_as_king || cap_coord.0 == Self::end_row_for_piece(&piece);
+                        return Some(Move::new_move(
+                            position,
+                            cap_pos,
+                            starts_as_king,
+                            ends_as_king,
+                        ));
                     }
                 }
                 None
@@ -225,6 +242,9 @@ impl Checkers {
         let (row, col) = self.board.to_coord(pos);
         if let Some(position) = self.selected_piece {
             self.move_piece(position, row, col);
+            if self.selectable_positions.is_empty() {
+                self.end_turn();
+            }
         } else {
             self.select_piece(row, col);
         }
@@ -264,7 +284,7 @@ impl Checkers {
                         .map(|p| self.board.to_coord(*p))
                         .collect::<Vec<(usize, usize)>>()
                 );
-                let input = dbg!(io::get_n_parts(2));
+                let input = io::get_n_parts(2);
                 if input.len() >= 2 {
                     let row: Result<usize, _> = try_read!("{}", input[0].bytes());
                     let col: Result<usize, _> = try_read!("{}", input[1].bytes());
@@ -273,12 +293,12 @@ impl Checkers {
                             break;
                         }
                     } else if input[0] == "undo" {
-                        self.undo_last_move();
+                        self.undo_last_turn();
                         continue;
                     }
                     println!("ERROR: I didn't catch that, please input your zero-indexed coordinates in format \"ROW <space> COLUMN\".");
                 } else if !input.is_empty() && input[0] == "undo" {
-                    self.undo_last_move();
+                    self.undo_last_turn();
                     break;
                 }
             }
@@ -291,8 +311,9 @@ impl Checkers {
             .get(position)
             .expect("piece must exist")
             .is_king();
-        let coord = (row, col);
-        let end_pos = self.board.to_position(coord);
+        let start_coord = self.board.to_coord(position);
+        let end_coord = (row, col);
+        let end_pos = self.board.to_position(end_coord);
         if let Some(m) = self
             .valid_moves
             .iter()
@@ -308,31 +329,40 @@ impl Checkers {
                     println!("\nCAPTURED PIECE {:?}", self.board.to_coord(cap_pos));
                 }
 
-                self.history.push(
-                    self.current_player,
-                    started_as_king,
-                    Move::new_capture(position, end_pos, cap_pos, cap_piece),
-                    self.board.get(end_pos).expect("just moved here").is_king(),
-                );
                 self.king_if_end_row(end_pos);
-            } else {
                 self.history.push(
                     self.current_player,
-                    started_as_king,
-                    Move::new(position, end_pos),
-                    self.board.get(end_pos).expect("just moved here").is_king(),
+                    Move::new_capture(
+                        position,
+                        end_pos,
+                        started_as_king,
+                        self.board.get(end_pos).expect("just moved here").is_king(),
+                        cap_pos,
+                        cap_piece,
+                    ),
+                );
+            } else {
+                self.king_if_end_row(end_pos);
+                self.history.push(
+                    self.current_player,
+                    Move::new_move(
+                        position,
+                        end_pos,
+                        started_as_king,
+                        self.board.get(end_pos).expect("just moved here").is_king(),
+                    ),
                 );
             }
             println!(
                 "PIECE MOVED {:?} -> {:?}\n",
-                coord,
+                start_coord,
                 self.board.to_coord(end_pos)
             );
             self.selected_piece = Some(end_pos); // NOTE selected piece update enables chaining captures
             self.update_valid_moves();
             true
         } else {
-            println!("ERROR: Invalid position {:?}, please try again.", coord);
+            println!("ERROR: Invalid position {:?}, please try again.", end_coord);
             false
         }
     }
@@ -342,8 +372,12 @@ impl Checkers {
         let pos = self.board.to_position(coord);
         if self.selectable_positions.contains(&pos) {
             self.selected_piece = Some(pos);
-            println!("\nPIECE SELECTED\n");
+            println!("\nPIECE SELECTED {:?}\n", coord);
             self.update_selectable_positions();
+            let piece = self.board.get(pos).expect("piece must exist");
+            let is_king = piece.is_king();
+            self.history
+                .push(self.current_player, Move::new_select(pos, is_king));
             true
         } else {
             println!("ERROR: Invalid position {:?}, please try again.", coord);
@@ -355,10 +389,7 @@ impl Checkers {
         let (pos_row, _) = self.board.to_coord(position);
         if let Some(piece) = self.board.get_mut(position) {
             if !piece.is_king() {
-                let end_row: usize = match piece.player() {
-                    Player::Red => 7,
-                    Player::White => 0,
-                };
+                let end_row = Self::end_row_for_piece(piece);
                 if pos_row == end_row {
                     piece.to_king();
                 }
@@ -366,7 +397,14 @@ impl Checkers {
         }
     }
 
-    pub fn undo_last_move(&mut self) {
+    fn end_row_for_piece(piece: &Piece) -> usize {
+        match piece.player() {
+            Player::Red => 7,
+            Player::White => 0,
+        }
+    }
+
+    pub fn undo_last_turn(&mut self) {
         let last_turn_moves = self.history.pop_last_turn();
         if let Some(mut moves) = last_turn_moves {
             let started_last_turn_as_king = self.history.started_last_turn_as_king();
@@ -382,7 +420,31 @@ impl Checkers {
             }
             self.selectable_positions = Vec::new();
             #[cfg(feature = "standalone")]
-            println!("\nLAST MOVE UNDONE");
+            println!("\nLAST TURN UNDONE");
+        }
+    }
+
+    pub fn undo_last_move(&mut self) {
+        if self.selected_piece.is_none() {
+            self.selected_piece = Some(self.history.get_last_move().unwrap().end());
+        }
+        let started_last_move_as_king = self.history.started_last_move_as_king();
+        let last_move = self.history.pop_last_move();
+        if let Some(m) = last_move {
+            let mut piece = self.board.take(m.end()).expect("ended turn here");
+            if !started_last_move_as_king {
+                piece.remove_king();
+            }
+            if let Some((cap_pos, cap_piece)) = m.capture() {
+                self.board.set(cap_pos, Some(cap_piece));
+            }
+            self.board.set(m.start(), Some(piece));
+            self.selected_piece = Some(m.start());
+            self.update_valid_moves();
+            #[cfg(feature = "standalone")]
+            println!("\nLAST TURN UNDONE");
+        } else {
+            panic!("no last move to undo")
         }
     }
 
@@ -392,6 +454,10 @@ impl Checkers {
 
     pub fn current_player(&self) -> Player {
         self.current_player
+    }
+
+    pub fn board(&self) -> &Board {
+        &self.board
     }
 }
 
@@ -413,7 +479,10 @@ mod tests {
         assert!(eq_ignore_order(&checkers.moves_for_pos(0)[..], &vec![][..]));
         assert!(eq_ignore_order(
             &checkers.moves_for_pos(8)[..],
-            &vec![Move::new(8, 12), Move::new(8, 13)][..]
+            &vec![
+                Move::new_move(8, 12, false, false),
+                Move::new_move(8, 13, false, false)
+            ][..]
         ));
     }
 }

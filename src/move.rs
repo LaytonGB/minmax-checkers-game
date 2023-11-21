@@ -4,14 +4,28 @@ use crate::piece::Piece;
 pub struct Move {
     start: usize,
     end: usize,
+    started_king: bool,
+    ended_king: bool,
     capture: Option<(usize, Piece)>,
 }
 
 impl Move {
-    pub fn new(start: usize, end: usize) -> Self {
+    pub fn new_select(position: usize, is_king: bool) -> Self {
+        Self {
+            start: position,
+            end: position,
+            started_king: is_king,
+            ended_king: is_king,
+            capture: None,
+        }
+    }
+
+    pub fn new_move(start: usize, end: usize, starts_as_king: bool, ends_as_king: bool) -> Self {
         Self {
             start,
             end,
+            started_king: starts_as_king,
+            ended_king: ends_as_king,
             capture: None,
         }
     }
@@ -19,12 +33,16 @@ impl Move {
     pub fn new_capture(
         start: usize,
         end: usize,
+        starts_as_king: bool,
+        ends_as_king: bool,
         capture_position: usize,
         capture_piece: Piece,
     ) -> Self {
         Self {
             start,
             end,
+            started_king: starts_as_king,
+            ended_king: ends_as_king,
             capture: Some((capture_position, capture_piece)),
         }
     }
@@ -47,5 +65,13 @@ impl Move {
     #[inline]
     pub fn is_capture(&self) -> bool {
         self.capture.is_some()
+    }
+
+    pub fn started_king(&self) -> bool {
+        self.started_king
+    }
+
+    pub fn ended_king(&self) -> bool {
+        self.ended_king
     }
 }
